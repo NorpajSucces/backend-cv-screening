@@ -93,10 +93,25 @@ const changePassword = async (req, res, next) => {
       });
     }
 
-    if (newPassword.length < 6) {
+    // Validasi kekuatan password baru
+    if (newPassword.length < 8) {
       return res.status(400).json({
         success: false,
-        message: 'Password baru minimal 6 karakter.',
+        message: 'Password baru minimal 8 karakter.',
+      });
+    }
+
+    if (!/[A-Z]/.test(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password baru harus mengandung minimal 1 huruf kapital.',
+      });
+    }
+
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password baru harus mengandung minimal 1 karakter spesial.',
       });
     }
 
