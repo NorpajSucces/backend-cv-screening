@@ -2,16 +2,10 @@
 const express = require("express");
 const router = express.Router();
 
-const { get openJobs } = require ("../controllers/jobController");
+const {get openJobs} = require ("../controllers/jobController");
 
 router.get("/jobs", getOpenJobs);
 module.exports = router;
-
-// src/ routes/jobRoutes.js
-const express = require("express");
-const router = express.Router();
-const { getOpenJobs, applyToJob } = require("../controllers/jobController");
-const upload = require("../middlewares/uploadMiddleware");
 
 router.get("/jobs", getOpenJobs);
 

@@ -24,7 +24,7 @@ Job.find(filter).sort({ createdAt: -1 });
 
     res.json(jobs);
 } catch (error) {
-    res.status(500).json({error;
+    res.status(500).json({error:
 error.message});
     }
 };

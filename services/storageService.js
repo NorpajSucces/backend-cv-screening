@@ -9,13 +9,13 @@ cloudinary.config({
 });
 
 
- * Upload buffer (from Multer memory) to Cloudinary via stream
- * @param (Buffer) buffer
- * @returns (promise<string>) secure_url
- * /
- * 
+ *// Upload buffer (from Multer memory) to Cloudinary via stream
+ *// @param (Buffer) buffer
+ *// @returns (promise<string>) secure_url
+ *// /
+ *// 
 
- const uploadPdBuffer = (buffer) => {
+ const uploadPdfBuffer = (buffer) => {
     return new Promise((resolve, reject) => {
        const stream =
  cloudinary.uploader.upload_stream(
