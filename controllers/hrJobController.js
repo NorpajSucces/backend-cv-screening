@@ -1,7 +1,7 @@
 const JobPosting = require("../models/JobPosting");
 
 // GET /api/hr/jobs
-// Ambil semua job posting milik HR yang login
+// Get all job postings
 const getAllJobs = async (req, res, next) => {
   try {
     const jobs = await JobPosting.find()
@@ -19,7 +19,7 @@ const getAllJobs = async (req, res, next) => {
 };
 
 // POST /api/hr/jobs
-// Buat job posting baru
+// Create a new job posting
 const createJob = async (req, res, next) => {
   try {
     const {
@@ -52,7 +52,7 @@ const createJob = async (req, res, next) => {
 };
 
 // PUT /api/hr/jobs/:id
-// Edit job posting
+// Update a job posting
 const updateJob = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -95,7 +95,7 @@ const updateJob = async (req, res, next) => {
 };
 
 // DELETE /api/hr/jobs/:id
-// Hapus job posting
+// Delete a job posting
 const deleteJob = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -119,7 +119,7 @@ const deleteJob = async (req, res, next) => {
 };
 
 // PATCH /api/hr/jobs/:id/status
-// Toggle status open ↔ closed
+// Toggle status open <-> closed
 const toggleJobStatus = async (req, res, next) => {
   try {
     const { id } = req.params;

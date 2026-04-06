@@ -1,33 +1,33 @@
-// schema Job Posting
+// Job Posting schema
 const mongoose = require('mongoose');
 
 const jobPostingSchema = new mongoose.Schema({
   title: {
     type:     String,
-    required: [true, 'Judul posisi wajib diisi'],
+    required: [true, 'Job title is required'],
     trim:     true,
   },
   aboutPosition: {
     type:     String,
-    required: [true, 'Ringkasan posisi wajib diisi'],
+    required: [true, 'Position summary is required'],
   },
   description: {
     type:     String,
-    required: [true, 'Deskripsi pekerjaan wajib diisi'],
+    required: [true, 'Job description is required'],
   },
   requirements: {
     type:     String,
-    required: [true, 'Requirements wajib diisi'],
+    required: [true, 'Requirements are required'],
   },
   location: {
     type:     String,
-    required: [true, 'Lokasi wajib diisi'],
+    required: [true, 'Location is required'],
     trim:     true,
   },
   employmentType: {
     type:     String,
     enum:     ['Full-time', 'Part-time', 'Internship'],
-    required: [true, 'Tipe pekerjaan wajib diisi'],
+    required: [true, 'Employment type is required'],
   },
   status: {
     type:    String,

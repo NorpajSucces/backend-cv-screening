@@ -11,18 +11,18 @@ const {
 
 const { protect } = require("../middleware/authMiddleware");
 
-// Semua route di bawah ini butuh JWT (Auth/Login)
+// All routes below require JWT authentication
 router.use(protect);
 
-// GET    /api/hr/jobs           Ambil semua job posting
-// POST   /api/hr/jobs           Buat job posting baru
+// GET    /api/hr/jobs           Get all job postings
+// POST   /api/hr/jobs           Create a new job posting
 router.route("/").get(getAllJobs).post(createJob);
 
-// PUT    /api/hr/jobs/:id       Edit job posting
-// DELETE /api/hr/jobs/:id       Hapus job posting
+// PUT    /api/hr/jobs/:id       Update a job posting
+// DELETE /api/hr/jobs/:id       Delete a job posting
 router.route("/:id").put(updateJob).delete(deleteJob);
 
-// PATCH  /api/hr/jobs/:id/status  Toggle open ↔ closed
+// PATCH  /api/hr/jobs/:id/status  Toggle open <-> closed
 router.patch("/:id/status", toggleJobStatus);
 
 module.exports = router;
