@@ -1,4 +1,4 @@
-// entry point, semua disatukan
+// Entry point
 const { setServers } = require('node:dns');
 setServers(['1.1.1.1', '8.8.8.8']);
 
@@ -29,7 +29,7 @@ app.get('/', (req, res) => {
   res.json({ success: true, message: 'SmartRecruit API is running' });
 });
 
-// Error Handler (harus paling bawah)
+// Error Handler (must be last)
 app.use(require('./middleware/errorHandler'));
 
 const PORT = process.env.PORT || 5000;
