@@ -7,29 +7,29 @@ const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    // Validasi input
+    // Validate input
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Email dan password wajib diisi.',
+        message: 'Email and password are required.',
       });
     }
 
-    // Cari user berdasarkan email
+    // Find user by email
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Email atau password salah.',
+        message: 'Invalid email or password.',
       });
     }
 
-    // Bandingkan password
+    // Compare password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Email atau password salah.',
+        message: 'Invalid email or password.',
       });
     }
 
@@ -51,7 +51,7 @@ const login = async (req, res, next) => {
           role:  user.role,
         },
       },
-      message: 'Login berhasil',
+      message: 'Login successful',
     });
   } catch (error) {
     next(error);
@@ -62,84 +62,84 @@ const login = async (req, res, next) => {
 // @route   POST /api/auth/logout
 const logout = async (req, res, next) => {
   try {
-    // JWT stateless — logout dihandle di frontend (hapus token dari localStorage)
+    // JWT is stateless — logout is handled on the frontend (remove token from localStorage)
     res.status(200).json({
       success: true,
-      message: 'Logout berhasil',
+      message: 'Logout successful',
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Ganti password HR Admin
+// @desc    Change password HR Admin
 // @route   PUT /api/auth/change-password
 const changePassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword, confirmPassword } = req.body;
 
-    // Validasi input
+    // Validate input
     if (!currentPassword || !newPassword || !confirmPassword) {
       return res.status(400).json({
         success: false,
-        message: 'Semua field wajib diisi.',
+        message: 'All fields are required.',
       });
     }
 
     if (newPassword !== confirmPassword) {
       return res.status(400).json({
         success: false,
-        message: 'Password baru dan konfirmasi tidak cocok.',
+        message: 'New password and confirmation do not match.',
       });
     }
 
-    // Validasi kekuatan password baru
+    // Validate new password strength
     if (newPassword.length < 8) {
       return res.status(400).json({
         success: false,
-        message: 'Password baru minimal 8 karakter.',
+        message: 'New password must be at least 8 characters.',
       });
     }
 
     if (!/[A-Z]/.test(newPassword)) {
       return res.status(400).json({
         success: false,
-        message: 'Password baru harus mengandung minimal 1 huruf kapital.',
+        message: 'New password must contain at least 1 uppercase letter.',
       });
     }
 
     if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)) {
       return res.status(400).json({
         success: false,
-        message: 'Password baru harus mengandung minimal 1 karakter spesial.',
+        message: 'New password must contain at least 1 special character.',
       });
     }
 
-    // Ambil user dari DB (termasuk password untuk perbandingan)
+    // Get user from DB (including password for comparison)
     const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User tidak ditemukan.',
+        message: 'User not found.',
       });
     }
 
-    // Bandingkan password lama
+    // Compare old password
     const isMatch = await user.comparePassword(currentPassword);
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Password lama salah.',
+        message: 'Current password is incorrect.',
       });
     }
 
-    // Update password (pre-save hook akan otomatis hash)
+    // Update password (pre-save hook will auto-hash)
     user.password = newPassword;
     await user.save();
 
     res.status(200).json({
       success: true,
-      message: 'Password berhasil diubah.',
+      message: 'Password changed successfully.',
     });
   } catch (error) {
     next(error);

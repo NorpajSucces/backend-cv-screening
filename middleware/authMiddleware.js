@@ -1,29 +1,29 @@
-// JWT verify
+// JWT verification middleware
 const jwt  = require('jsonwebtoken');
 const User = require('../models/User');
 
 const protect = async (req, res, next) => {
   try {
-    // Ambil token dari header
+    // Get token from header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
-        message: 'Akses ditolak. Token tidak ditemukan.',
+        message: 'Access denied. No token provided.',
       });
     }
 
     const token = authHeader.split(' ')[1];
 
-    // Verifikasi token
+    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Cek user masih ada di DB
+    // Check if user still exists in DB
     const user = await User.findById(decoded.id).select('-password');
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'User tidak ditemukan.',
+        message: 'User not found.',
       });
     }
 
@@ -32,7 +32,7 @@ const protect = async (req, res, next) => {
   } catch (error) {
     return res.status(401).json({
       success: false,
-      message: 'Token tidak valid atau sudah expired.',
+      message: 'Invalid or expired token.',
     });
   }
 };
