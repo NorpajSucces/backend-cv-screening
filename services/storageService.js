@@ -1,6 +1,6 @@
 // src/services/storageService.js
 const cloudinary = require("cloudinary").v2;
-const streamifier = require("streamfier");
+const streamifier = require("streamifier");
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -8,17 +8,14 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-
+/**
  * Upload buffer (from Multer memory) to Cloudinary via stream
- * @param (Buffer) buffer
- * @returns (promise<string>) secure_url
- * /
- * 
-
- const uploadPdBuffer = (buffer) => {
+ * @param {Buffer} buffer
+ * @returns {Promise<string>} secure_url
+ */
+const uploadPdfBuffer = (buffer) => {
     return new Promise((resolve, reject) => {
-       const stream =
- cloudinary.uploader.upload_stream(
+       const stream = cloudinary.uploader.upload_stream(
         {
             resource_type: "raw",
             folder: "cv_uploads",
@@ -29,7 +26,7 @@ cloudinary.config({
         }
     );
 
-streamfier.creatReadStream(buffer).pipe(stream);
+    streamifier.createReadStream(buffer).pipe(stream);
     });
 };
 
