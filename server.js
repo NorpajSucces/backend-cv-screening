@@ -1,4 +1,4 @@
-// entry point, semua disatukan
+// Entry point
 const { setServers } = require('node:dns');
 setServers(['1.1.1.1', '8.8.8.8']);
 
@@ -6,6 +6,7 @@ require('dotenv').config();
 const express   = require('express');
 const cors      = require('cors');
 const connectDB = require('./config/db');
+const mongoose = require("mongoose");
 
 const app = express();
 
@@ -13,9 +14,10 @@ const app = express();
 connectDB();
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: 'http://localhost:5173' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
 
 // Routes
 app.use('/api/auth',       require('./routes/authRoutes'));
@@ -31,7 +33,7 @@ app.get('/', (req, res) => {
   res.json({ success: true, message: 'SmartRecruit API is running' });
 });
 
-// Error Handler (harus paling bawah)
+// Error Handler (must be last)
 app.use(require('./middleware/errorHandler'));
 
 const PORT = process.env.PORT || 5000;

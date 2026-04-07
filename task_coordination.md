@@ -91,7 +91,7 @@ Dokumen ini disusun untuk memberikan transparansi peran, tanggung jawab koding (
 2. Memfokuskan pengamanan rute *React Router DOM*: membungkus Dasbor ke dalam `ProtectedRoute.jsx` agar siapa pun tanpa JWT Token di-tendang (*redirect*) kembali ke gerbang Login.
 3. Mengelola mekanisme (*Token Storage*) via Local Storage peramban (tanpa menggunakan cookie demi kemudahan di React SPA).
 4. Slicing UI tabel-tabel pembedahan CRUD Pekerjaan. Fitur penambahan lowongan dengan desain *Form* yang cukup masif (tentang *skills*, persyaratan, letak kota, dll). Menambah *Toggle* animasi interaktif penutupan Loker (Buka/Tutup lowongan).
-5. Merajut penyalur memori dari Redux (`authSlice` untuk state orang login, dan mekanisme edit/buang dari API *job posting* milik *backend*).
+5. Merajut penyalur memori dari Redux (`authSlice` untuk\ state orang login, dan mekanisme edit/buang dari API *job posting* milik *backend*).
 
 **Peta Koordinasi:**
 *   **Lintas Divisi (dengan Zhafran - Backend Lead):** Sangat bergantung pada struktur *Response* pengantaran (*auth*). Sinkronisasi rute URL khusus `/api/hr/...` di fungsi pengambilan Axios *Frontend* dengan yang di-*deploy* Zhafran. Pastikan parameter ubah Sandi tepat presisi sasaran field-field *Request*-nya.
