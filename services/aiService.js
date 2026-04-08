@@ -1,36 +1,34 @@
 /**
- * Layanan AI untuk terhubung ke KADA AI Cloud Endpoint.
+ * AI Service for connecting to KADA AI Cloud Endpoint.
  */
 const axios = require('axios');
 
-// Ganti ENDPOINT URL INI dengan URL dari dashboard Anda (misalnya https://mlapi.run/... )
-// Pastikan tidak ada `/v1/responses` di belakangnya kecuali memang diwajibkan oleh platform Anda.
+// Replace this ENDPOINT URL with the URL from your dashboard
 const KADA_API_URL = "https://mlapi.run/8ad406df-bb6c-4a51-aaaf-3aa3235598d8/v1/responses";
 
 /**
- * Menganalisis teks CV pelamar terhadap kualifikasi pekerjaan.
+ * Analyzes an applicant's CV text against job requirements.
  */
 exports.analyzeCV = async (cvText, jobRequirements) => {
   try {
-    const prompt = `Anda adalah seorang Technical Recruiter senior. Tugas Anda adalah menilai CV pelamar berdasarkan kriteria loker di bawah ini.
+    const prompt = `You are a highly experienced Senior IT Technical Recruiter.
+Your task is to analyze a candidate's CV based on the provided job requirements.
+Provide an objective evaluation and return ONLY a valid JSON format below (no markdown blocks, no extra text):
+{
+  "score": <number 0-100>,
+  "summary": "<short 2-3 sentence summary about the candidate overall>",
+  "strengths": ["strength 1", "strength 2", "strength 3"],
+  "weaknesses": ["weakness 1", "weakness 2", "weakness 3"]
+}
 
-Syarat & Posisi Pekerjaan:
+Job Requirements:
 ${jobRequirements}
 
-Teks Mentah CV Pelamar:
-${cvText}
-
-Tolong berikan penilaian objektif tentang kecocokan pelamar.
-HARUS membalas HANYA dengan JSON valid (tanpa string tambahan, tanpa markdown block) seperti berikut:
-{
-  "score": <angka_0-100>,
-  "strengths": "<kelebihan_pelamar_sesuai_loker>",
-  "weaknesses": "<kelemahan_pelamar_sesuai_loker>"
-}
-`;
+Candidate CV Content:
+${cvText}`;
 
     const chatPayload = {
-      model: "openai/gpt-5.2-pro", // Ditambahkan sesuai petunjuk KADA API terbaru
+      model: "openai/gpt-5.2-pro", 
       input: [{ role: "user", content: prompt }]
     };
 
@@ -42,11 +40,13 @@ HARUS membalas HANYA dengan JSON valid (tanpa string tambahan, tanpa markdown bl
     });
 
     const data = response.data;
-    console.log("\\n[DEBUG KADA API - analyzeCV]:", JSON.stringify(data, null, 2));
+    console.log("\n[DEBUG KADA API - analyzeCV]:", JSON.stringify(data, null, 2));
     
     let cleanResponseText = "";
     if (data.choices && data.choices.length > 0 && data.choices[0].message) {
       cleanResponseText = data.choices[0].message.content;
+    } else if (data.output && data.output.length > 0 && data.output[0].content && data.output[0].content.length > 0) {
+      cleanResponseText = data.output[0].content[0].text;
     } else if (data.text) { 
       cleanResponseText = data.text;
     } else {
@@ -58,35 +58,45 @@ HARUS membalas HANYA dengan JSON valid (tanpa string tambahan, tanpa markdown bl
     }
 
     cleanResponseText = cleanResponseText.replace(/```json/g, "").replace(/```/g, "").trim();
-    return JSON.parse(cleanResponseText);
+    const result = JSON.parse(cleanResponseText);
+    
+    return {
+      score: result.score,
+      summary: result.summary,
+      strengths: result.strengths,
+      weaknesses: result.weaknesses,
+    };
   } catch (error) {
     if (error.response) {
       console.error('Error KADA API (analyzeCV):', error.response.status, error.response.data);
     } else {
-      console.error('Error pada aiService.analyzeCV:', error.message);
+      console.error('Error in aiService.analyzeCV:', error.message);
     }
     throw error;
   }
 };
 
 /**
- * Menghasilkan kalimat halus bernada manusia perihal alasan penolakan untuk dikirim di Email.
+ * Generates a polite, human-toned rejection feedback for Email.
  */
 exports.generateRejectionFeedback = async (cvText, jobRequirements) => {
   try {
-    const prompt = `Anda adalah seorang HR Manager yang empatik namun profesional. 
-Buatkan 1-2 paragraf umpan balik (feedback) konstruktif menolak pelamar ini dari lokernya.
-Sebutkan poin spesifik dari CV-nya yang perlu ditingkatkan agar memenuhi loker ini.
-Sopan, tanpa basa-basi berlebih. Tulis dalam Bahasa Indonesia.
+    const prompt = `You are an empathetic yet professional HR Manager.
+Your task is to write a personalized, constructive, and humane rejection email
+to a candidate who did not pass the selection process.
+Use polite and professional English.
+Explain specifically what the candidate needs to improve for future opportunities based on their CV and the job requirements.
+Do not sound like a robot — write with warmth and sincerity.
+Return ONLY the rejection email content without any subject line or opening greetings.
 
-Syarat & Posisi Pekerjaan:
+Job Requirements:
 ${jobRequirements}
 
-Teks Mentah CV Pelamar:
+Candidate CV Content:
 ${cvText}`;
 
     const chatPayload = {
-      model: "openai/gpt-5.2-pro", // Ditambahkan sesuai petunjuk KADA API terbaru
+      model: "openai/gpt-5.2-pro",
       input: [{ role: "user", content: prompt }]
     };
 
@@ -98,11 +108,13 @@ ${cvText}`;
     });
 
     const data = response.data;
-    console.log("\\n[DEBUG KADA API - Rejection]:", JSON.stringify(data, null, 2));
+    console.log("\n[DEBUG KADA API - Rejection]:", JSON.stringify(data, null, 2));
 
     let cleanResponseText = "";
     if (data.choices && data.choices.length > 0 && data.choices[0].message) {
       cleanResponseText = data.choices[0].message.content;
+    } else if (data.output && data.output.length > 0 && data.output[0].content && data.output[0].content.length > 0) {
+      cleanResponseText = data.output[0].content[0].text;
     } else if (data.text) { 
       cleanResponseText = data.text;
     } else {
@@ -118,7 +130,7 @@ ${cvText}`;
     if (error.response) {
       console.error('Error KADA API (Rejection):', error.response.status, error.response.data);
     } else {
-      console.error('Error pada aiService.generateRejectionFeedback:', error.message);
+      console.error('Error in aiService.generateRejectionFeedback:', error.message);
     }
     throw error;
   }

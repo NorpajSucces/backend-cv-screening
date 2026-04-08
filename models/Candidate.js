@@ -33,6 +33,10 @@ const candidateSchema = new mongoose.Schema({
     max:     100,
     default: null,
   },
+  aiSummary: {
+    type:    String,
+    default: null,
+  },
   aiStrengths: {
     type:    String,
     default: null,
