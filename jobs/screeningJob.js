@@ -7,11 +7,33 @@ const aiService = require('../services/aiService');
 const JobPosting = require('../models/JobPosting');
 const Candidate = require('../models/Candidate');
 
-// We accept the candidate document object passed from the controller
+// HELPER — Retry AI up to maxRetries times before giving up
+const retryAnalyzeCV = async (cvText, requirements, maxRetries = 3) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`- AI Attempt ${attempt} of ${maxRetries}...`);
+      const result = await aiService.analyzeCV(cvText, requirements);
+      return result; // Success
+    } catch (error) {
+      console.warn(`- Attempt ${attempt} failed: ${error.message}`);
+
+      if (attempt === maxRetries) {
+        throw new Error(`AI failed after ${maxRetries} attempts.`);
+      }
+
+      // Wait before retrying (progressively longer each attempt)
+      const delay = attempt * 2000; // 2s, 4s, 6s
+      console.log(`- Waiting ${delay / 1000}s before retry...`);
+      await new Promise((res) => setTimeout(res, delay));
+    }
+  }
+};
+
+// MAIN — Screening Job
 module.exports = async function screeningJob(candidateRecord) {
   const candidateId = candidateRecord._id;
   console.log(`\n[BACKGROUND JOB START] Screening Candidate: ${candidateRecord.email} (ID: ${candidateId})`);
-  
+
   try {
     // 1. Re-fetch the Candidate record to ensure we have the latest Mongoose instance
     const candidate = await Candidate.findById(candidateId);
@@ -44,32 +66,33 @@ module.exports = async function screeningJob(candidateRecord) {
     }
 
     console.log(`- Sending text to KADA HTTP AI endpoint for analysis...`);
-    // 5. Send to AI (Using Refactored aiService in English)
-    const aiResult = await aiService.analyzeCV(cvText, job.requirements);
+    // 5. Send to AI with retry logic (max 3 attempts)
+    const aiResult = await retryAnalyzeCV(cvText, job.requirements, 3);
 
     // 6. Format Result and Save to DB
     console.log(`- AI Screening Success! Extracted Score: ${aiResult.score}`);
-    
+
     candidate.aiScore = aiResult.score || 0;
-    candidate.aiSummary = aiResult.summary || "No summary provided.";
-    
+    candidate.aiSummary = aiResult.summary || 'No summary provided.';
+
     // Convert JSON Arrays to Comma-Separated Strings for our Schema
-    candidate.aiStrengths = Array.isArray(aiResult.strengths) 
-      ? aiResult.strengths.join(', ') 
-      : (aiResult.strengths || "None");
-      
-    candidate.aiWeaknesses = Array.isArray(aiResult.weaknesses) 
-      ? aiResult.weaknesses.join(', ') 
-      : (aiResult.weaknesses || "None");
-      
+    candidate.aiStrengths = Array.isArray(aiResult.strengths)
+      ? aiResult.strengths.join(', ')
+      : (aiResult.strengths || 'None');
+
+    candidate.aiWeaknesses = Array.isArray(aiResult.weaknesses)
+      ? aiResult.weaknesses.join(', ')
+      : (aiResult.weaknesses || 'None');
+
     // IMPORTANT: Mark the workflow cycle finished!
-    candidate.status = 'processed'; 
+    candidate.status = 'processed';
 
     await candidate.save();
     console.log(`[BACKGROUND JOB SUCCESS] Candidate ${candidate.email} updated to 'processed'.\n`);
+
   } catch (error) {
     console.error(`[BACKGROUND JOB FAILED] Screening for ${candidateId} failed:`, error.message);
-    
+
     try {
       // Mark candidate as failed so HR knows something went wrong
       await Candidate.findByIdAndUpdate(candidateId, { status: 'failed' });

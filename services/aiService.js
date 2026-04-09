@@ -3,17 +3,44 @@
  */
 const axios = require('axios');
 
-// Replace this ENDPOINT URL with the URL from your dashboard
-const KADA_API_URL = "https://mlapi.run/8ad406df-bb6c-4a51-aaaf-3aa3235598d8/v1/responses";
+const KADA_API_URL = process.env.KADA_API_URL; // ✅ Pindah ke .env
+const KADA_API_KEY = process.env.KADA_API_KEY;
+const KADA_MODEL = process.env.KADA_MODEL || 'openai/gpt-5.2-pro';
 
-/**
- * Analyzes an applicant's CV text against job requirements.
- */
+// HELPER — Extract text from various KADA API response formats
+// KADA returns output[] with mixed types: "reasoning" (no content) + "message" (has content)
+// We must find the "message" type item, NOT just blindly read output[0]
+const extractResponseText = (data) => {
+  // Format 1: OpenAI-compatible (choices array)
+  if (data.choices?.[0]?.message?.content) {
+    return data.choices[0].message.content;
+  }
+
+  // Format 2: KADA Responses API (output array with mixed types)
+  // Iterate to find the item with type === "message"
+  if (Array.isArray(data.output)) {
+    for (const item of data.output) {
+      if (item.type === 'message' && item.content?.[0]?.text) {
+        return item.content[0].text;
+      }
+    }
+  }
+
+  // Fallback: stringify entire response for debugging
+  return JSON.stringify(data);
+};
+
+// FUNGSI 1 — Analyze CV & Scoring
 exports.analyzeCV = async (cvText, jobRequirements) => {
   try {
-    const prompt = `You are a highly experienced Senior IT Technical Recruiter.
+    const prompt = `You are a highly experienced Senior IT Technical Recruiter 
+specializing in software engineering roles. Evaluate the candidate's technical 
+skills, relevant project experience, and technology stack alignment strictly 
+based on the job requirements provided.
+
 Your task is to analyze a candidate's CV based on the provided job requirements.
-Provide an objective evaluation and return ONLY a valid JSON format below (no markdown blocks, no extra text):
+Provide an objective evaluation and return ONLY a valid JSON format below 
+(no markdown blocks, no extra text):
 {
   "score": <number 0-100>,
   "summary": "<short 2-3 sentence summary about the candidate overall>",
@@ -28,43 +55,34 @@ Candidate CV Content:
 ${cvText}`;
 
     const chatPayload = {
-      model: "openai/gpt-5.2-pro", 
-      input: [{ role: "user", content: prompt }]
+      model: KADA_MODEL,
+      input: [{ role: 'user', content: prompt }]
     };
 
     const response = await axios.post(KADA_API_URL, chatPayload, {
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.KADA_API_KEY}`
-      }
+        'Authorization': `Bearer ${KADA_API_KEY}`
+      },
+      timeout: 30000, // 30 detik timeout
     });
 
     const data = response.data;
-    console.log("\n[DEBUG KADA API - analyzeCV]:", JSON.stringify(data, null, 2));
-    
-    let cleanResponseText = "";
-    if (data.choices && data.choices.length > 0 && data.choices[0].message) {
-      cleanResponseText = data.choices[0].message.content;
-    } else if (data.output && data.output.length > 0 && data.output[0].content && data.output[0].content.length > 0) {
-      cleanResponseText = data.output[0].content[0].text;
-    } else if (data.text) { 
-      cleanResponseText = data.text;
-    } else {
-      cleanResponseText = data;
-    }
+    console.log('\n[DEBUG KADA API - analyzeCV]:', JSON.stringify(data, null, 2));
 
-    if (typeof cleanResponseText !== "string") {
+    let cleanResponseText = extractResponseText(data); 
+    if (typeof cleanResponseText !== 'string') {
       cleanResponseText = JSON.stringify(cleanResponseText);
     }
 
-    cleanResponseText = cleanResponseText.replace(/```json/g, "").replace(/```/g, "").trim();
+    cleanResponseText = cleanResponseText.replace(/```json/g, '').replace(/```/g, '').trim();
     const result = JSON.parse(cleanResponseText);
-    
+
     return {
-      score: result.score,
-      summary: result.summary,
-      strengths: result.strengths,
-      weaknesses: result.weaknesses,
+      score: result.score ?? 0,               
+      summary: result.summary ?? 'No summary provided.',
+      strengths: result.strengths ?? [],
+      weaknesses: result.weaknesses ?? [],
     };
   } catch (error) {
     if (error.response) {
@@ -76,16 +94,16 @@ ${cvText}`;
   }
 };
 
-/**
- * Generates a polite, human-toned rejection feedback for Email.
- */
+// FUNGSI 2 — Generate Rejection Feedback 
+
 exports.generateRejectionFeedback = async (cvText, jobRequirements) => {
   try {
     const prompt = `You are an empathetic yet professional HR Manager.
 Your task is to write a personalized, constructive, and humane rejection email
 to a candidate who did not pass the selection process.
 Use polite and professional English.
-Explain specifically what the candidate needs to improve for future opportunities based on their CV and the job requirements.
+Explain specifically what the candidate needs to improve for future opportunities 
+based on their CV and the job requirements.
 Do not sound like a robot — write with warmth and sincerity.
 Return ONLY the rejection email content without any subject line or opening greetings.
 
@@ -96,32 +114,23 @@ Candidate CV Content:
 ${cvText}`;
 
     const chatPayload = {
-      model: "openai/gpt-5.2-pro",
-      input: [{ role: "user", content: prompt }]
+      model: KADA_MODEL,
+      input: [{ role: 'user', content: prompt }]
     };
 
     const response = await axios.post(KADA_API_URL, chatPayload, {
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.KADA_API_KEY}`
-      }
+        'Authorization': `Bearer ${KADA_API_KEY}`
+      },
+      timeout: 30000, // 30 detik timeout
     });
 
     const data = response.data;
-    console.log("\n[DEBUG KADA API - Rejection]:", JSON.stringify(data, null, 2));
+    console.log('\n[DEBUG KADA API - Rejection]:', JSON.stringify(data, null, 2));
 
-    let cleanResponseText = "";
-    if (data.choices && data.choices.length > 0 && data.choices[0].message) {
-      cleanResponseText = data.choices[0].message.content;
-    } else if (data.output && data.output.length > 0 && data.output[0].content && data.output[0].content.length > 0) {
-      cleanResponseText = data.output[0].content[0].text;
-    } else if (data.text) { 
-      cleanResponseText = data.text;
-    } else {
-      cleanResponseText = data;
-    }
-    
-    if (typeof cleanResponseText !== "string") {
+    let cleanResponseText = extractResponseText(data); // Pakai helper
+    if (typeof cleanResponseText !== 'string') {
       cleanResponseText = JSON.stringify(cleanResponseText);
     }
 
