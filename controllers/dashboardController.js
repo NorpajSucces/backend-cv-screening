@@ -168,9 +168,7 @@ const getJobStatusBreakdown = async (req, res, next) => {
 // recent updated candidates
 const getRecentCandidates = async (req, res, next) => {
     try {
-        const candidates = await Candidate.find({
-            status: { $in: ['pending', 'processed'] } // AI states
-        })
+        const candidates = await Candidate.find()
         .sort({ appliedAt: -1 }) //most recently applied applicants
         .limit(5)
         .select('name aiScore status appliedAt') //only needed fields
@@ -178,10 +176,9 @@ const getRecentCandidates = async (req, res, next) => {
         // map to frontend format
         const result = candidates.map(c => ({
             name: c.name,
-            score: c.status === 'processed' ? c.aiScore : 'processing',
-            status:
-                c.status === 'processed' ? 'processed' :
-                'pending'
+            score: c.aiScore,
+            status: c.status,
+            appliedAt: c.appliedAt
         }))
 
         res.json(result)
