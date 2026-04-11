@@ -103,8 +103,8 @@ const getJobStatusBreakdown = async (req, res, next) => {
         const { jobId, type } = req.query
         let matchCondition = {}
 
-        // CASE: Others
         if (type === 'others') {
+            // CASE: Others — exclude top 4 jobs
             const topJobs = await Candidate.aggregate([
                 {
                     $group: {
@@ -121,12 +121,13 @@ const getJobStatusBreakdown = async (req, res, next) => {
             matchCondition = {
                 jobId: { $nin: topJobIds }
             }
-        } else {
-            // CASE: sepcific job
+        } else if (jobId) {
+            // CASE: specific job
             matchCondition = {
                 jobId: new mongoose.Types.ObjectId(jobId)
             }
         }
+        // CASE: no params — matchCondition stays {} → aggregate ALL candidates
 
         // aggregate only relevant status
         const statusData = await Candidate.aggregate([
@@ -171,11 +172,13 @@ const getRecentCandidates = async (req, res, next) => {
         const candidates = await Candidate.find()
         .sort({ appliedAt: -1 }) //most recently applied applicants
         .limit(5)
-        .select('name aiScore status appliedAt') //only needed fields
+        .select('_id name email aiScore status appliedAt') //only needed fields
 
         // map to frontend format
         const result = candidates.map(c => ({
+            id: c._id,
             name: c.name,
+            email: c.email,
             score: c.aiScore,
             status: c.status,
             appliedAt: c.appliedAt

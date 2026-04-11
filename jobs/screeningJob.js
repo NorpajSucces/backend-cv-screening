@@ -75,13 +75,13 @@ module.exports = async function screeningJob(candidateRecord) {
     candidate.aiScore = aiResult.score || 0;
     candidate.aiSummary = aiResult.summary || 'No summary provided.';
 
-    // Convert JSON Arrays to Comma-Separated Strings for our Schema
+    // Convert JSON Arrays to newline-separated strings for our Schema
     candidate.aiStrengths = Array.isArray(aiResult.strengths)
-      ? aiResult.strengths.join(', ')
+      ? aiResult.strengths.join('\n')
       : (aiResult.strengths || 'None');
 
     candidate.aiWeaknesses = Array.isArray(aiResult.weaknesses)
-      ? aiResult.weaknesses.join(', ')
+      ? aiResult.weaknesses.join('\n')
       : (aiResult.weaknesses || 'None');
 
     // IMPORTANT: Mark the workflow cycle finished!

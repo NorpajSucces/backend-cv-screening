@@ -13,7 +13,11 @@ const CandidateController = {
     },
     findById: (req, res, next) => {
         Candidate.findById(req.params.id)
+        .populate('jobId')
         .then(candidate => {
+            if (!candidate) {
+                return res.status(404).json({ message: 'Candidate not found' });
+            }
             res.json(candidate)
         })
         .catch(error => {

@@ -1,4 +1,5 @@
 const JobPosting = require("../models/JobPosting");
+const Candidate = require("../models/Candidate");
 
 // GET /api/hr/jobs
 // Get all job postings
@@ -8,10 +9,21 @@ const getAllJobs = async (req, res, next) => {
       .sort({ createdAt: -1 })
       .populate("createdBy", "name email");
 
+    // Add applicantCount to each job
+    const jobsWithCount = await Promise.all(
+      jobs.map(async (job) => {
+        const count = await Candidate.countDocuments({ jobId: job._id });
+        return {
+          ...job.toObject(),
+          applicantCount: count,
+        };
+      })
+    );
+
     res.status(200).json({
       success: true,
-      count: jobs.length,
-      data: jobs,
+      count: jobsWithCount.length,
+      data: jobsWithCount,
     });
   } catch (error) {
     next(error);
