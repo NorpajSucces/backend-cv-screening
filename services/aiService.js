@@ -98,14 +98,11 @@ ${cvText}`;
 
 exports.generateRejectionFeedback = async (cvText, jobRequirements) => {
   try {
-    const prompt = `You are an empathetic yet professional HR Manager.
-Your task is to write a personalized, constructive, and humane rejection email
-to a candidate who did not pass the selection process.
-Use polite and professional English.
-Explain specifically what the candidate needs to improve for future opportunities 
-based on their CV and the job requirements.
-Do not sound like a robot — write with warmth and sincerity.
-Return ONLY the rejection email content without any subject line or opening greetings.
+    const prompt = `You are an empathetic yet professional HR Technical Evaluator.
+A candidate has been rejected for a position based on their CV and the job requirements.
+Your task is to provide 3 to 4 bullet points of constructive, highly specific, and actionable feedback on what the candidate lacks and needs to improve for future opportunities.
+Use polite, encouraging, and professional English. Use Markdown bullet points.
+IMPORTANT: You are writing ONLY the feedback section. DO NOT write an email introduction, greetings, or conclusions like "Thank you" or "Best regards". Start directly with the feedback evaluation.
 
 Job Requirements:
 ${jobRequirements}

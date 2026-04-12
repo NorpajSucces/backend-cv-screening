@@ -5,6 +5,7 @@ const { deleteFileCloudinary } = require('../services/storageService')
 const screeningJob = require('../jobs/screeningJob')
 const pdfParse = require('pdf-parse');
 const aiService = require('../services/aiService');
+const { marked } = require('marked');
 
 const CandidateController = {
     find: (req, res, next) => {
@@ -84,6 +85,9 @@ const CandidateController = {
             candidate.status = 'rejected';
             await candidate.save();
 
+            // Convert Markdown AI feedback into clean HTML
+            const htmlFeedback = marked.parse(candidate.aiFeedback || '*No feedback generated.*');
+
             await sendEmail({
                 to: candidate.email,
                 subject: 'Application Update: SmartRecruiter',
@@ -94,7 +98,9 @@ const CandidateController = {
                     <p>After careful consideration, we regret to inform you that you will not be moving forward to the next stage of our recruitment process at this time.</p>
                     <p>As part of our commitment to providing a helpful and transparent experience, we have included feedback generated from our evaluation system below. We hope this will support your future applications and professional development.</p>
                     <p><strong>Application Feedback:</strong></p>
-                    <p style="white-space: pre-line;">${candidate.aiFeedback}</p>
+                    <div style="background-color: #f8fafc; padding: 15px 20px; border-left: 4px solid #3b82f6; border-radius: 4px; color: #334155; line-height: 1.6; font-family: sans-serif;">
+                        ${htmlFeedback}
+                    </div>
                     <p>We encourage you to continue developing your skills and exploring new opportunities. We truly appreciate your interest in joining our team and wish you all the best in your future endeavors.</p>
                     <br/><br/>
                     <p>Best regards,</p>
