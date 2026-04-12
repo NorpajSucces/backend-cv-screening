@@ -1,5 +1,6 @@
 const Candidate = require('../models/Candidate')
 const { sendEmail } = require('../services/emailService')
+const axios = require('axios')
 
 const CandidateController = {
     find: (req, res, next) => {
@@ -112,7 +113,22 @@ const CandidateController = {
                 return res.status(404).json({ message: 'CV not found' });
             }
 
-            res.redirect(candidate.cvUrl);
+            // Proxy the download to set correct headers and filename
+            axios({
+                method: 'get',
+                url: candidate.cvUrl,
+                responseType: 'stream'
+            })
+            .then(response => {
+                const safeName = candidate.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', `attachment; filename="${safeName}_cv.pdf"`);
+                response.data.pipe(res);
+            })
+            .catch(err => {
+                console.error('Download error:', err);
+                res.status(500).json({ message: 'Error downloading file from storage' });
+            });
         })
         .catch(error => {
             next(error)
