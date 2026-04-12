@@ -7,8 +7,14 @@ const express   = require('express');
 const cors      = require('cors');
 const connectDB = require('./config/db');
 const mongoose = require("mongoose");
+const swaggerUi = require('swagger-ui-express');
+const YAML = require('yamljs');
+const path = require('path');
 
 const app = express();
+
+// Load Swagger Document
+const swaggerDocument = YAML.load(path.join(__dirname, './docs/swagger.yaml'));
 
 // Connect Database
 connectDB();
@@ -17,6 +23,9 @@ connectDB();
 app.use(cors({ origin: 'http://localhost:5173' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Swagger Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 
 // Routes
