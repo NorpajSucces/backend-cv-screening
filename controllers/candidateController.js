@@ -3,6 +3,8 @@ const { sendEmail } = require('../services/emailService')
 const axios = require('axios')
 const { deleteFileCloudinary } = require('../services/storageService')
 const screeningJob = require('../jobs/screeningJob')
+const pdfParse = require('pdf-parse');
+const aiService = require('../services/aiService');
 
 const CandidateController = {
     find: (req, res, next) => {
@@ -61,18 +63,30 @@ const CandidateController = {
             next(error)
         })
     },
-    reject: (req, res, next) => {
-        Candidate.findByIdAndUpdate(
-            req.params.id,
-            { status: 'rejected' },
-            { new: true }
-        )
-        .then(candidate => {
-            if(!candidate) throw new Error('Candidate not found')
+    reject: async (req, res, next) => {
+        try {
+            const candidate = await Candidate.findById(req.params.id).populate('jobId');
+            if (!candidate) return res.status(404).json({ message: 'Candidate not found' });
             
-            return sendEmail({
+            // Generate AI Feedback only if it hasn't been generated yet
+            if (!candidate.aiFeedback) {
+                console.log(`- Generating AI Rejection Feedback for ${candidate.email}...`);
+                const response = await axios.get(candidate.cvUrl, { responseType: 'arraybuffer' });
+                const pdfBuffer = Buffer.from(response.data, 'binary');
+                const pdfData = await pdfParse(pdfBuffer);
+                const cvText = pdfData.text;
+                
+                const jobRequirements = candidate.jobId && candidate.jobId.requirements ? candidate.jobId.requirements : "General Software Engineering requirements";
+                
+                candidate.aiFeedback = await aiService.generateRejectionFeedback(cvText, jobRequirements);
+            }
+
+            candidate.status = 'rejected';
+            await candidate.save();
+
+            await sendEmail({
                 to: candidate.email,
-                subject: 'Application Update',
+                subject: 'Application Update: SmartRecruiter',
                 html: `
                     <h2>Thank You for Your Application</h2>
                     <h2>Dear ${candidate.name},</h2>
@@ -80,20 +94,19 @@ const CandidateController = {
                     <p>After careful consideration, we regret to inform you that you will not be moving forward to the next stage of our recruitment process at this time.</p>
                     <p>As part of our commitment to providing a helpful and transparent experience, we have included feedback generated from our evaluation system below. We hope this will support your future applications and professional development.</p>
                     <p><strong>Application Feedback:</strong></p>
-                    <p>${candidate.aiFeedback}</p>
+                    <p style="white-space: pre-line;">${candidate.aiFeedback}</p>
                     <p>We encourage you to continue developing your skills and exploring new opportunities. We truly appreciate your interest in joining our team and wish you all the best in your future endeavors.</p>
                     <br/><br/>
                     <p>Best regards,</p>
                     <p><strong>SmartRecruiter</strong></p>
                 `
-            }).then(() => candidate)
-        })
-        .then(candidate => {
-            res.json({ message: 'Candidate rejected & email sent', candidate })
-        })
-        .catch(error => {
-            next(error)
-        })
+            });
+
+            res.json({ message: 'Candidate rejected & feedback email sent', candidate });
+        } catch (error) {
+            console.error("AI Rejection Error:", error);
+            next(error);
+        }
     },
     findByJob: (req, res, next) => {
         Candidate.find({ jobId: req.params.jobId })

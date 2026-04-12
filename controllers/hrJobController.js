@@ -121,9 +121,23 @@ const deleteJob = async (req, res, next) => {
       });
     }
 
+    // Cascade delete: Remove associated candidates and their CV files
+    const candidates = await Candidate.find({ jobId: id });
+    const { deleteFileCloudinary } = require('../services/storageService');
+    
+    const deletePromises = candidates.map(c => {
+        if (c.cvUrl) {
+            return deleteFileCloudinary(c.cvUrl).catch(err => console.error("Cloudinary delete err:", err));
+        }
+        return Promise.resolve();
+    });
+    
+    await Promise.all(deletePromises);
+    await Candidate.deleteMany({ jobId: id });
+
     res.status(200).json({
       success: true,
-      message: "Job posting deleted successfully",
+      message: "Job posting and associated candidates deleted successfully",
     });
   } catch (error) {
     next(error);
