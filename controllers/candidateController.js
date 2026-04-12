@@ -1,6 +1,8 @@
 const Candidate = require('../models/Candidate')
 const { sendEmail } = require('../services/emailService')
 const axios = require('axios')
+const { deleteFileCloudinary } = require('../services/storageService')
+const screeningJob = require('../jobs/screeningJob')
 
 const CandidateController = {
     find: (req, res, next) => {
@@ -133,6 +135,54 @@ const CandidateController = {
         .catch(error => {
             next(error)
         })
+    },
+    bulkDelete: async (req, res, next) => {
+        try {
+            const { ids } = req.body;
+            if (!ids || !Array.isArray(ids) || ids.length === 0) {
+                return res.status(400).json({ message: 'No candidate IDs provided' });
+            }
+
+            // Temukan kandidat untuk mendapatkan cvUrl
+            const candidates = await Candidate.find({ _id: { $in: ids } });
+            
+            // Hapus file dari Cloudinary
+            const deletePromises = candidates.map(c => {
+                if (c.cvUrl) {
+                    // Try catch internal supaya jika file tak ada, delete db tetap lanjut
+                    return deleteFileCloudinary(c.cvUrl).catch(err => console.error("Cloudinary delete err:", err));
+                }
+                return Promise.resolve();
+            });
+
+            await Promise.all(deletePromises);
+
+            // Hapus dari MongoDB
+            await Candidate.deleteMany({ _id: { $in: ids } });
+
+            res.json({ message: 'Candidates and their CV files have been deleted successfully.' });
+        } catch (error) {
+            next(error);
+        }
+    },
+    retryScreening: async (req, res, next) => {
+        try {
+            const candidateId = req.params.id;
+            
+            // Set status to pending and reset score
+            const candidate = await Candidate.findByIdAndUpdate(candidateId, { status: 'pending', aiScore: null, aiSummary: null, aiStrengths: null, aiWeaknesses: null }, { new: true });
+            
+            if (!candidate) {
+                return res.status(404).json({ message: 'Candidate not found' });
+            }
+
+            // Panggil ulang background job tanpa await (agar respons HTTP cepat)
+            screeningJob(candidate).catch(err => console.error("Screening Job Error:", err));
+
+            res.json({ message: 'Screening process has been restarted.', candidate });
+        } catch (error) {
+            next(error);
+        }
     }
 }
 

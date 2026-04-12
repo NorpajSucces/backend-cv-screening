@@ -29,5 +29,28 @@ const uploadPdfBuffer = (buffer) => {
     streamifier.createReadStream(buffer).pipe(stream);
     });
 };
+/**
+ * Extract public_id from URL and delete file from Cloudinary resource_type: "raw"
+ * @param {string} url 
+ * @returns {Promise<any>}
+ */
+const deleteFileCloudinary = (url) => {
+    return new Promise((resolve, reject) => {
+        try {
+            // URL format example: https://res.cloudinary.com/.../raw/upload/v1234567/cv_uploads/filename.pdf
+            const parts = url.split('/');
+            const filename = parts[parts.length - 1];
+            // for raw resources, public_id includes the folder and filename (with extension)
+            const public_id = `cv_uploads/${filename}`;
+            
+            cloudinary.uploader.destroy(public_id, { resource_type: "raw" }, (error, result) => {
+                if (error) return reject(error);
+                resolve(result);
+            });
+        } catch (err) {
+            reject(err);
+        }
+    });
+};
 
-module.exports = { uploadPdfBuffer };
+module.exports = { uploadPdfBuffer, deleteFileCloudinary };
