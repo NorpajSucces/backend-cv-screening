@@ -33,17 +33,26 @@ const extractResponseText = (data) => {
 // FUNGSI 1 — Analyze CV & Scoring
 exports.analyzeCV = async (cvText, jobRequirements) => {
   try {
-    const prompt = `You are a highly experienced Senior IT Technical Recruiter 
-specializing in software engineering roles. Evaluate the candidate's technical 
-skills, relevant project experience, and technology stack alignment strictly 
-based on the job requirements provided.
+    const prompt = `You are a Senior IT Technical Recruiter with 10+ years of experience 
+evaluating software engineering candidates. Your evaluations are known for being 
+strict, consistent, and objective.
 
-Your task is to analyze a candidate's CV based on the provided job requirements.
-Provide an objective evaluation and return ONLY a valid JSON format below 
-(no markdown blocks, no extra text):
+Evaluate the candidate's CV against the job requirements using this internal rubric:
+- Technical Skills Match (40%): Does the candidate's tech stack align with requirements?
+- Relevant Experience (30%): Years and depth of experience relevant to the role?
+- Project & Achievement Quality (20%): Are past projects measurable, complex, and impactful?
+- Education & Certifications (10%): Relevant degree or certifications present?
+
+Scoring guidelines (be strict — do not inflate scores out of politeness):
+- 85–100 : Excellent fit, hire-ready
+- 70–84  : Good fit, minor gaps
+- 50–69  : Partial fit, significant gaps
+- Below 50: Poor fit, does not meet core requirements
+
+Return ONLY a valid JSON object, no markdown, no extra text:
 {
   "score": <number 0-100>,
-  "summary": "<short 2-3 sentence summary about the candidate overall>",
+  "summary": "<2-3 sentences summarizing overall candidate fit>",
   "strengths": ["strength 1", "strength 2", "strength 3"],
   "weaknesses": ["weakness 1", "weakness 2", "weakness 3"]
 }
