@@ -1,11 +1,8 @@
 const Candidate = require('../models/Candidate')
-const { sendEmail } = require('../services/emailService')
 const axios = require('axios')
 const { deleteFileCloudinary } = require('../services/storageService')
 const screeningJob = require('../jobs/screeningJob')
-const pdfParse = require('pdf-parse');
-const aiService = require('../services/aiService');
-const { marked } = require('marked');
+const decisionJob = require('../jobs/decisionJob')
 
 const CandidateController = {
     find: (req, res, next) => {
@@ -30,87 +27,39 @@ const CandidateController = {
             next(error)
         })
     },
-    accept: (req, res, next) => {
-        Candidate.findByIdAndUpdate(
-            req.params.id,
-            { status: 'advanced' },
-            { new: true }
-        )
-        .then(candidate => {
-            if(!candidate) throw new Error('Candidate not found')
-            
-            return sendEmail({
-                to: candidate.email,
-                subject: 'Application Update',
-                html: `
-                    <h2>Congratulations ${candidate.name}</h2>
-                    <p>We are pleased to inform you that your application has successfully passed our initial screening process.</p>
-                    <p>
-                        After careful consideration, we are excited to announce that you will be proceeding to the next phase of our recruitment process.
-                        This next stage will allow us to further evaluate your skills and qualifications. We believe you have strong potential, and we are looking forward to learning more about you.    
-                    </p>
-                    <p>Please note that the schedule and details for the upcoming recruitment stage will be communicated to you at a later time. Kindly keep an eye on your email for further updates.</p>
-                    <p>Thank you for your interest and for taking the time to apply. We truly appreciate your effort and enthusiasm.</p>
-                    <br/><br/>
-                    <p>Best regards,</p>
-                    <p><strong>SmartRecruiter</strong></p>
-                `
-            }).then(() => candidate)
-        })
-        .then(candidate => {
-            res.json({ message: 'Candidate accepted & email sent', candidate })
-        })
-        .catch(error => {
-            next(error)
-        })
+    accept: async (req, res, next) => {
+        try {
+            const candidate = await Candidate.findByIdAndUpdate(
+                req.params.id,
+                { status: 'advanced' },
+                { new: true }
+            ).populate('jobId');
+
+            if (!candidate) return res.status(404).json({ message: 'Candidate not found' });
+
+            // Trigger background job (Email) without awaiting
+            decisionJob(candidate, 'accept').catch(err => console.error("Accept Background Job Error:", err));
+
+            res.json({ message: 'Candidate accepted. Notification will be sent in background.', candidate });
+        } catch (error) {
+            next(error);
+        }
     },
     reject: async (req, res, next) => {
         try {
-            const candidate = await Candidate.findById(req.params.id).populate('jobId');
+            const candidate = await Candidate.findByIdAndUpdate(
+                req.params.id,
+                { status: 'rejected' },
+                { new: true }
+            ).populate('jobId');
+
             if (!candidate) return res.status(404).json({ message: 'Candidate not found' });
-            
-            // Generate AI Feedback only if it hasn't been generated yet
-            if (!candidate.aiFeedback) {
-                console.log(`- Generating AI Rejection Feedback for ${candidate.email}...`);
-                const response = await axios.get(candidate.cvUrl, { responseType: 'arraybuffer' });
-                const pdfBuffer = Buffer.from(response.data, 'binary');
-                const pdfData = await pdfParse(pdfBuffer);
-                const cvText = pdfData.text;
-                
-                const jobRequirements = candidate.jobId && candidate.jobId.requirements ? candidate.jobId.requirements : "General Software Engineering requirements";
-                
-                candidate.aiFeedback = await aiService.generateRejectionFeedback(cvText, jobRequirements);
-            }
 
-            candidate.status = 'rejected';
-            await candidate.save();
+            // Trigger background job (AI Feedback + Email) without awaiting
+            decisionJob(candidate, 'reject').catch(err => console.error("Reject Background Job Error:", err));
 
-            // Convert Markdown AI feedback into clean HTML
-            const htmlFeedback = marked.parse(candidate.aiFeedback || '*No feedback generated.*');
-
-            await sendEmail({
-                to: candidate.email,
-                subject: 'Application Update: SmartRecruiter',
-                html: `
-                    <h2>Thank You for Your Application</h2>
-                    <h2>Dear ${candidate.name},</h2>
-                    <p>We sincerely appreciate the time and effort you put into your application. It was a pleasure reviewing your profile.</p>
-                    <p>After careful consideration, we regret to inform you that you will not be moving forward to the next stage of our recruitment process at this time.</p>
-                    <p>As part of our commitment to providing a helpful and transparent experience, we have included feedback generated from our evaluation system below. We hope this will support your future applications and professional development.</p>
-                    <p><strong>Application Feedback:</strong></p>
-                    <div style="background-color: #f8fafc; padding: 15px 20px; border-left: 4px solid #3b82f6; border-radius: 4px; color: #334155; line-height: 1.6; font-family: sans-serif;">
-                        ${htmlFeedback}
-                    </div>
-                    <p>We encourage you to continue developing your skills and exploring new opportunities. We truly appreciate your interest in joining our team and wish you all the best in your future endeavors.</p>
-                    <br/><br/>
-                    <p>Best regards,</p>
-                    <p><strong>SmartRecruiter</strong></p>
-                `
-            });
-
-            res.json({ message: 'Candidate rejected & feedback email sent', candidate });
+            res.json({ message: 'Candidate rejected. AI feedback and email will be processed in background.', candidate });
         } catch (error) {
-            console.error("AI Rejection Error:", error);
             next(error);
         }
     },
