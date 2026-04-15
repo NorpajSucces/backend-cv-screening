@@ -167,7 +167,13 @@ EMAIL_PASS=xxx
 EMAIL_FROM=SmartRecruit <noreply@smartrecruit.com>
 ```
 
-**3. Start the API Server:**
+**3. Seed Default Administrator Account:**
+Since HR Registration is disabled by design (for security), you must seed the database first to generate the default HR Administrator account.
+```bash
+node seed.js
+```
+
+**4. Start the API Server:**
 ```bash
 npm run dev
 ```
